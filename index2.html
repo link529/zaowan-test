@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>早晚人格手账 | SBTI风格版</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0a0a0f;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+  }
+  .app-container {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  .page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    min-height: 100vh;
+    padding: 24px 20px;
+    display: none;
+    flex-direction: column;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  .page.active {
+    display: flex;
+    opacity: 1;
+    transform: translateX(0);
+    position: relative;
+  }
+  .page.slide-out-left {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  /* 晨间配色 */
+  .morning-theme { 
+    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b2 50%, #ffcc80 100%); 
+    color: #5c3d00; 
+  }
+  .morning-theme .card { background: rgba(255,255,255,0.85); box-shadow: 0 4px 20px rgba(255,140,0,0.15); }
+  .morning-theme .option-card { background: #fff; border: 2px solid #ffd89b; color: #5c3d00; }
+  .morning-theme .option-card:hover, .morning-theme .option-card.selected { background: linear-gradient(135deg, #ff9f43, #ff6b35); color: white; border-color: #ff6b35; }
+  .morning-theme .progress-bar { background: linear-gradient(90deg, #ff9f43, #ff6b35); }
+  .morning-theme .btn-primary { background: linear-gradient(135deg, #ff9f43, #ff6b35); color: white; }
+  .morning-theme .btn-secondary { background: rgba(255,159,67,0.2); color: #e67e22; }
+  .morning-theme .result-title { color: #d35400; }
+  .morning-theme .score-badge { background: linear-gradient(135deg, #ff9f43, #ff6b35); }
+  .morning-theme .dimension-tag { background: rgba(255,159,67,0.15); color: #d35400; }
+
+  /* 晚间配色 */
+  .evening-theme { 
+    background: linear-gradient(135deg, #0f0c29 0%, #1a1a3e 50%, #24243e 100%); 
+    color: #e0e0ff; 
+  }
+  .evening-theme .card { background: rgba(255,255,255,0.08); box-shadow: 0 4px 20px rgba(138,43,226,0.2); }
+  .evening-theme .option-card { background: rgba(255,255,255,0.1); border: 2px solid rgba(138,43,226,0.4); color: #e0e0ff; }
+  .evening-theme .option-card:hover, .evening-theme .option-card.selected { background: linear-gradient(135deg, #8a2be2, #6a5acd); color: white; border-color: #8a2be2; }
+  .evening-theme .progress-bar { background: linear-gradient(90deg, #8a2be2, #6a5acd); }
+  .evening-theme .btn-primary { background: linear-gradient(135deg, #8a2be2, #6a5acd); color: white; }
+  .evening-theme .btn-secondary { background: rgba(138,43,226,0.2); color: #b19cd9; }
+  .evening-theme .result-title { color: #dda0dd; }
+  .evening-theme .score-badge { background: linear-gradient(135deg, #8a2be2, #6a5acd); }
+  .evening-theme .dimension-tag { background: rgba(138,43,226,0.2); color: #dda0dd; }
+
+  /* 首页 */
+  .home-page {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0c29 100%);
+    color: white;
+  }
+  .home-title {
+    font-size: 2.8rem;
+    font-weight: 900;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ff9f43, #8a2be2, #ff6b35);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+  .home-subtitle {
+    font-size: 1rem;
+    color: #a0a0c0;
+    margin-bottom: 12px;
+    line-height: 1.6;
+  }
+  .home-tag {
+    display: inline-block;
+    padding: 6px 16px;
+    background: rgba(138,43,226,0.2);
+    border: 1px solid rgba(138,43,226,0.4);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #b19cd9;
+    margin-bottom: 40px;
+  }
+  .mode-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .mode-card {
+    padding: 28px 24px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    opacity: 0.15;
+  }
+  .mode-card.morning {
+    background: linear-gradient(135deg, #fff8e7, #ffe4b5);
+    color: #5c3d00;
+    border: 2px solid #ffd89b;
+  }
+  .mode-card.morning::before { background: #ff9f43; }
+  .mode-card.evening {
+    background: linear-gradient(135deg, #1a0b2e, #302b63);
+    color: #e0e0ff;
+    border: 2px solid #4a3b8c;
+  }
+  .mode-card.evening::before { background: #8a2be2; }
+  .mode-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .mode-emoji { font-size: 2.5rem; margin-bottom: 8px; display: block; }
+  .mode-name { font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+  .mode-desc { font-size: 0.85rem; opacity: 0.8; }
+  .mode-questions { font-size: 0.75rem; opacity: 0.6; margin-top: 4px; }
+
+  /* 答题页 */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .back-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+  }
+  .back-btn:hover { opacity: 1; }
+  .question-counter {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+  .progress-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 3px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .question-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+  }
+  .question-dimension {
+    font-size: 0.75rem;
+    opacity: 0.5;
+    margin-bottom: 24px;
+    font-weight: 500;
+    letter-spacing: 1px;
+  }
+  .options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+  .option-card {
+    padding: 16px 18px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-card:active { transform: scale(0.97); }
+  .option-letter {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: rgba(0,0,0,0.08);
+    flex-shrink: 0;
+  }
+  .option-card.selected .option-letter { background: rgba(255,255,255,0.3); }
+
+  /* 结果页 */
+  .result-page {
+    align-items: center;
+    text-align: center;
+    padding-bottom: 40px;
+  }
+  .result-emoji {
+    font-size: 4rem;
+    margin-bottom: 12px;
+    animation: bounce 1.2s ease infinite alternate;
+  }
+  @keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-12px); } }
+  .result-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .result-code {
+    font-size: 0.9rem;
+    opacity: 0.6;
+    margin-bottom: 12px;
+    font-family: monospace;
+    letter-spacing: 2px;
+  }
+  .result-movie {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-bottom: 12px;
+    font-style: italic;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.05);
+  }
+  .score-badge {
+    padding: 8px 20px;
+    border-radius: 20px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    display: inline-block;
+  }
+  .dimension-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+    padding: 0 12px;
+  }
+  .dimension-tag {
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .result-desc {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    margin-bottom: 24px;
+    padding: 0 12px;
+    opacity: 0.9;
+    text-align: left;
+  }
+  #radarChart {
+    width: 100%;
+    height: 280px;
+    margin-bottom: 20px;
+  }
+  .btn-group {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    max-width: 320px;
+    margin-bottom: 12px;
+  }
+  .btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  .btn:active { transform: scale(0.96); }
+
+  /* 海报按钮 */
+  .poster-btn {
+    width: 100%;
+    max-width: 320px;
+    padding: 14px 20px;
+    border: 2px dashed;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    background: transparent;
+    margin-bottom: 12px;
+  }
+  .morning-theme .poster-btn {
+    border-color: #ff9f43;
+    color: #e67e22;
+  }
+  .evening-theme .poster-btn {
+    border-color: #8a2be2;
+    color: #b19cd9;
+  }
+
+  /* 海报预览 */
+  #posterPreview {
+    display: none;
+    margin-top: 20px;
+    text-align: center;
+  }
+  #posterPreview img {
+    max-width: 100%;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  #posterPreview p {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    opacity: 0.6;
+  }
+
+  /* 隐藏的海报生成区域 */
+  #posterArea {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 750px;
+    height: 1334px;
+    padding: 60px;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f0c29 100%);
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+  #posterArea .poster-logo {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  #posterArea .poster-logo .logo-text {
+    font-size: 32px;
+    background: linear-gradient(135deg, #ff9f43, #8a2be2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 4px;
+    font-weight: 900;
+  }
+  #posterArea .poster-logo .logo-sub {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+    letter-spacing: 2px;
+  }
+  #posterArea .poster-result {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  #posterArea .poster-emoji {
+    font-size: 80px;
+    margin-bottom: 16px;
+  }
+  #posterArea .poster-title {
+    font-size: 48px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ff9f43, #8a2be2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  #posterArea .poster-code {
+    font-size: 18px;
+    color: #888;
+    margin-bottom: 12px;
+    font-family: monospace;
+    letter-spacing: 3px;
+  }
+  #posterArea .poster-movie {
+    font-size: 20px;
+    color: #9F7AEA;
+    background: rgba(159,122,234,0.15);
+    padding: 8px 20px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+  #posterArea .poster-radar {
+    width: 400px;
+    height: 280px;
+    margin: 20px auto;
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 20px;
+  }
+  #posterArea .poster-desc {
+    font-size: 22px;
+    line-height: 1.7;
+    text-align: center;
+    padding: 0 40px;
+    color: #ccc;
+    font-style: italic;
+    margin-bottom: 30px;
+  }
+  #posterArea .poster-footer {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    text-align: center;
+  }
+  #posterArea .poster-footer .qr-hint {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 10px;
+  }
+  #posterArea .poster-footer .qr-code {
+    width: 140px;
+    height: 140px;
+    background: white;
+    border-radius: 16px;
+    margin: 0 auto 12px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #666;
+  }
+  #posterArea .poster-footer .qr-url {
+    font-size: 14px;
+    color: #555;
+  }
+
+  /* 动画 */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up { animation: fadeInUp 0.5s ease forwards; }
+  .delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+  /* 保存提示 */
+  .save-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(0,0,0,0.85);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+  }
+  .save-toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- 首页 -->
+  <div class="page home-page active" id="homePage">
+    <div class="home-title fade-in-up">早晚人格手账</div>
+    <div class="home-subtitle fade-in-up delay-1">测测你的晨间人格 & 晚间人格<br>15维度 · 抽象梗文化 · 赛博算命</div>
+    <div class="home-tag fade-in-up delay-1">🔥 SBTI风格升级版</div>
+    <div class="mode-cards fade-in-up delay-2">
+      <div class="mode-card morning" onclick="startTest('morning')">
+        <span class="mode-emoji">🌅</span>
+        <div class="mode-name">晨间模式</div>
+        <div class="mode-desc">15道题，测测你早上是什么物种</div>
+        <div class="mode-questions">维度：起床力 · 行动力 · 社交欲 · 自律性 · 乐观度</div>
+      </div>
+      <div class="mode-card evening" onclick="startTest('evening')">
+        <span class="mode-emoji">🌙</span>
+        <div class="mode-name">晚间模式</div>
+        <div class="mode-desc">15道题，看看你今天渡了几劫</div>
+        <div class="mode-questions">维度：完成度 · 社交能量 · 幸运值 · 情绪稳定 · 自我认同</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 答题页 -->
+  <div class="page" id="quizPage">
+    <div class="header">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <span class="question-counter" id="questionCounter">1/15</span>
+      <button class="back-btn" onclick="goHome()" style="font-size:1.2rem;">✕</button>
+    </div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="question-text" id="questionText"></div>
+    <div class="question-dimension" id="questionDimension"></div>
+    <div class="options-container" id="optionsContainer"></div>
+  </div>
+
+  <!-- 结果页 -->
+  <div class="page result-page" id="resultPage">
+    <div class="result-emoji" id="resultEmoji">🎭</div>
+    <div class="result-title fade-in-up" id="resultTitle"></div>
+    <div class="result-code fade-in-up delay-1" id="resultCode"></div>
+    <div class="result-movie fade-in-up delay-1" id="resultMovie"></div>
+    <div class="score-badge fade-in-up delay-1" id="scoreBadge"></div>
+    <div class="dimension-tags fade-in-up delay-2" id="dimensionTags"></div>
+    <div class="result-desc fade-in-up delay-2" id="resultDesc"></div>
+    <div id="radarChart" class="fade-in-up delay-3"></div>
+    <div class="btn-group fade-in-up delay-3">
+      <button class="btn btn-secondary" onclick="restartSame()">再测一次</button>
+      <button class="btn btn-primary" onclick="goHome()">返回首页</button>
+    </div>
+    <button class="poster-btn fade-in-up delay-3" onclick="generatePoster()">📸 生成分享海报</button>
+    <div id="posterPreview">
+      <img id="posterImage" alt="分享海报">
+      <p>长按保存图片，分享到朋友圈</p>
+    </div>
+  </div>
+</div>
+
+<!-- 隐藏的海报生成区域 -->
+<div id="posterArea">
+  <div class="poster-logo">
+    <div class="logo-text">☀️🌙 早晚人格手账</div>
+    <div class="logo-sub">MORNING & EVENING PERSONALITY</div>
+  </div>
+  <div class="poster-result">
+    <div class="poster-emoji" id="posterEmoji">🧟</div>
+    <div class="poster-title" id="posterTitle">丧尸苏醒型</div>
+    <div class="poster-code" id="posterCode">ZOMB-M</div>
+    <div class="poster-movie" id="posterMovie">《釜山xing》同款</div>
+  </div>
+  <div class="poster-radar" id="posterRadar"></div>
+  <div class="poster-desc" id="posterDesc">"你的身体已经出门，灵魂还在被窝里。"</div>
+  <div class="poster-footer">
+    <div class="qr-hint">扫码测测你是什么类型</div>
+    <div class="qr-code">二维码</div>
+    <div class="qr-url">https://zaowan-test.github.io</div>
+  </div>
+</div>
+
+<div class="save-toast" id="saveToast">进度已保存</div>
+
+<script>
+
+// ==================== 晨间15题 ====================
+const morningQuestions = [
+  { q: "闹钟响了，你的第一反应是？", d: "起床难度", a: "立刻弹起", b: "再睡5分钟", c: "关掉继续睡" },
+  { q: "醒来第一件事做什么？", d: "行动力", a: "喝水拉伸", b: "刷手机", c: "发呆躺平" },
+  { q: "你的早餐状态？", d: "自律性", a: "精致营养餐", b: "路边随便吃", c: "没有早餐" },
+  { q: "出门前的准备时间？", d: "行动力", a: "提前规划好", b: "手忙脚乱", c: "经常迟到" },
+  { q: "早上遇到熟人，你会？", d: "社交欲", a: "热情打招呼", b: "点头微笑", c: "假装没看见" },
+  { q: "清晨的BGM通常是？", d: "乐观度", a: "励志歌单", b: "播客/新闻", c: "静音/丧歌" },
+  { q: "早上发生意外（比如打翻咖啡），你会？", d: "情绪稳定", a: "淡定处理Plan B", b: "发朋友圈吐槽", c: "想请假回家" },
+  { q: "你对今天的期待值？", d: "乐观度", a: "充满期待", b: "顺其自然", c: "活着就行" },
+  { q: "早上照镜子，你觉得自己像？", d: "自我认同", a: "都市丽人/精英", b: "普通打工人", c: "丧尸本尸" },
+  { q: "你的晨间咖啡/茶是？", d: "自律性", a: "手冲精品", b: "速溶凑合", c: "不需要，靠意志" },
+  { q: "早上收到工作消息，你的反应？", d: "行动力", a: "立刻回复处理", b: "已读不回", c: "假装没看到" },
+  { q: "形容你的早晨最贴切的词？", d: "综合", a: "井井有条", b: "兵荒马乱", c: "世界大战" },
+  { q: "早上最想对世界说的话？", d: "社交欲", a: "早安！今天也要加油！", b: "别来烦我", c: "世界毁灭吧" },
+  { q: "你的起床动力主要来自？", d: "自律性", a: "内在目标驱动", b: "生存所迫", c: "没有动力，被动起床" },
+  { q: "如果清晨是一种动物，你是？", d: "综合", a: "早起鸟", b: "树懒", c: "夜行动物（被迫早起版）" }
+];
+
+// ==================== 晚间15题 ====================
+const eveningQuestions = [
+  { q: "今天的工作/学习任务完成度？", d: "完成度", a: "超额完成", b: "勉强交差", c: "活着就行" },
+  { q: "今天有\"社死\"瞬间吗？", d: "情绪稳定", a: "没有，完美", b: "有但不在意", c: "想移民火星" },
+  { q: "下班后的社交能量值？", d: "社交能量", a: "满格，还能嗨", b: "剩一格", c: "已关机，勿扰" },
+  { q: "今天有意外好运吗？", d: "幸运值", a: "有，锦鲤附体", b: "没有", c: "水逆全天" },
+  { q: "晚餐怎么解决？", d: "自律性", a: "自己做健康餐", b: "外卖解决", c: "没吃/泡面" },
+  { q: "今天有隐形加班/内卷吗？", d: "完成度", a: "没有，准点下班", b: "有一点", c: "卷了但没人发现" },
+  { q: "今天最崩溃的瞬间是？", d: "情绪稳定", a: "没有崩溃", b: "小事烦心", c: "天塌了的大事" },
+  { q: "睡前刷手机的内容？", d: "自我认同", a: "学习/自我提升", b: "短视频娱乐", c: "前任/emo网抑云" },
+  { q: "用一句话总结今天？", d: "自我认同", a: "充实有意义", b: "平凡的一天", c: "终于结束了" },
+  { q: "今晚想对自己说什么？", d: "自我认同", a: "你真棒", b: "辛苦了", c: "还活着就不错了" },
+  { q: "今天的社交活动？", d: "社交能量", a: "主动约朋友", b: "被动应付", c: "零社交，独美" },
+  { q: "如果今天是一部电影，它是？", d: "综合", a: "励志片", b: "纪录片", c: "灾难片" },
+  { q: "此刻你的真实状态？", d: "情绪稳定", a: "平静满足", b: "麻木疲惫", c: "濒临爆炸" },
+  { q: "明天的期待？", d: "乐观度", a: "又是新的一天", b: "随缘吧", c: " dread（恐惧）" },
+  { q: "如果给今天的自己颁奖，你是？", d: "综合", a: "最佳主角", b: "最佳配角", c: "最佳背景板" }
+];
+
+// ==================== 晨间结果（15题，分数范围15-45） ====================
+const morningResults = {
+  15: { name: "天选之子型", code: "GOD-M", movie: "《黑客di国》觉醒尼奥", desc: "你早起不是因为必须，而是选择了红药丸。你看透了床的幻象，掌握了时间的真相。在别人沉睡时，你已经拯救了世界。你的存在本身就是对赖床者的降维打击。", emoji: "💊", radar: [1, 5, 5, 3, 5], tags: ["自律狂魔", "时间刺客", "晨间卷王"] },
+  16: { name: "天选之子型", code: "GOD-M", movie: "《黑客di国》觉醒尼奥", desc: "你早起不是因为必须，而是选择了红药丸。你看透了床的幻象，掌握了时间的真相。在别人沉睡时，你已经拯救了世界。", emoji: "💊", radar: [1, 5, 5, 3, 5], tags: ["自律狂魔", "时间刺客", "晨间卷王"] },
+  17: { name: "元气喷射型", code: "VIBE-M", movie: "《功夫gong夫》阿星觉醒", desc: "你早起像打通了任督二脉，能量外溢，恨不得跟每只路过的狗说早安。你的存在让室友想杀人，但你自己爽翻了。你是行走的咖啡因，人间的永动机。", emoji: "⚡", radar: [1, 5, 5, 4, 3], tags: ["人间充电宝", "社交悍匪", "永动机"] },
+  18: { name: "元气喷射型", code: "VIBE-M", movie: "《功夫gong夫》阿星觉醒", desc: "你早起像打通了任督二脉，能量外溢，恨不得跟每只路过的狗说早安。你的存在让室友想杀人，但你自己爽翻了。", emoji: "⚡", radar: [1, 5, 5, 4, 3], tags: ["人间充电宝", "社交悍匪", "永动机"] },
+  19: { name: "小天使自律型", code: "ANGEL-M", movie: "《天使ai美丽》艾米丽", desc: "你早起不仅自己爽，还要让全世界变暖：做早餐、浇花、给室友带咖啡。你的善良像清晨阳光，但别累着自己，天使也需要睡懒觉。", emoji: "😇", radar: [1, 4, 5, 5, 5], tags: ["人间小太阳", "自律菩萨", "晨间治愈系"] },
+  20: { name: "小天使自律型", code: "ANGEL-M", movie: "《天使ai美丽》艾米丽", desc: "你早起不仅自己爽，还要让全世界变暖。你的善良像清晨阳光，但别累着自己，天使也需要睡懒觉。", emoji: "😇", radar: [1, 4, 5, 5, 5], tags: ["人间小太阳", "自律菩萨", "晨间治愈系"] },
+  21: { name: "人间清醒型", code: "CLEAR-M", movie: "《这个sha手不太冷》里昂", desc: "你早起没有情绪波动，像职业杀手执行任务：刷牙、洗脸、出门，面无表情但效率极高。你的冷静让周围人害怕，但你知道，这只是还没开机。", emoji: "🥷", radar: [2, 4, 3, 1, 4], tags: ["人形AI", "冷面执行者", "晨间机器人"] },
+  22: { name: "人间清醒型", code: "CLEAR-M", movie: "《这个sha手不太冷》里昂", desc: "你早起没有情绪波动，像职业杀手执行任务。你的冷静让周围人害怕，但你知道，这只是还没开机。", emoji: "🥷", radar: [2, 4, 3, 1, 4], tags: ["人形AI", "冷面执行者", "晨间机器人"] },
+  23: { name: "佛系慢摇型", code: "BUDDHA-M", movie: "《疯狂dong物城》树懒闪电", desc: "你早起但不着急，慢慢来，反正世界会等你。你的座右铭是：急什么，反正都会到的。这种松弛感，是当代年轻人最稀缺的超能力。", emoji: "🦥", radar: [2, 3, 4, 2, 3], tags: ["反卷先锋", "松弛感大师", "晨间禅修者"] },
+  24: { name: "佛系慢摇型", code: "BUDDHA-M", movie: "《疯狂dong物城》树懒闪电", desc: "你早起但不着急，慢慢来，反正世界会等你。这种松弛感，是当代年轻人最稀缺的超能力。", emoji: "🦥", radar: [2, 3, 4, 2, 3], tags: ["反卷先锋", "松弛感大师", "晨间禅修者"] },
+  25: { name: "戏精上身型", code: "DRAMA-M", movie: "《喜剧zhi王》尹天仇", desc: "你的早晨是一场独角戏：对着镜子演励志剧、在厨房演美食节目、出门演职场精英。虽然有点累，但谁说生活不需要演技呢。", emoji: "🎭", radar: [2, 4, 4, 3, 4], tags: ["晨间奥斯卡", "戏精本精", "人生如戏"] },
+  26: { name: "戏精上身型", code: "DRAMA-M", movie: "《喜剧zhi王》尹天仇", desc: "你的早晨是一场独角戏。虽然有点累，但谁说生活不需要演技呢。", emoji: "🎭", radar: [2, 4, 4, 3, 4], tags: ["晨间奥斯卡", "戏精本精", "人生如戏"] },
+  27: { name: "暴躁杨婆婆型", code: "ANGRY-M", movie: "《百变xing君》致敬", desc: "早起让你化身周星驰电影里的杨婆婆，看什么都不顺眼，想骂全世界。但你的暴躁里藏着一种荒诞的可爱。", emoji: "😤", radar: [4, 2, 1, 1, 2], tags: ["晨间火药桶", "暴躁甜心", "起床气王者"] },
+  28: { name: "暴躁杨婆婆型", code: "ANGRY-M", movie: "《百变xing君》致敬", desc: "早起让你化身杨婆婆，看什么都不顺眼。但你的暴躁里藏着一种荒诞的可爱。", emoji: "😤", radar: [4, 2, 1, 1, 2], tags: ["晨间火药桶", "暴躁甜心", "起床气王者"] },
+  29: { name: "小恶魔赖床型", code: "DEVIL-M", movie: "《睡mei人》黑化版", desc: "你内心有个小恶魔，每天早上都在耳边低语：再睡5分钟。你明知是陷阱，还是一次次跳进去。狡猾又可爱，是你了。", emoji: "😈", radar: [4, 2, 2, 2, 2], tags: ["赖床艺术家", "恶魔低语", "晨间拖延症"] },
+  30: { name: "小恶魔赖床型", code: "DEVIL-M", movie: "《睡mei人》黑化版", desc: "你内心有个小恶魔，每天早上都在耳边低语：再睡5分钟。你明知是陷阱，还是一次次跳进去。", emoji: "😈", radar: [4, 2, 2, 2, 2], tags: ["赖床艺术家", "恶魔低语", "晨间拖延症"] },
+  31: { name: "被床封印型", code: "SEAL-M", movie: "《哈利bo特》禁锢咒", desc: "你的床不是家具，是法器。每天早上都在上演起不来的魔法对决。闹钟是咒语，被子是结界，而你是自愿被困的巫师。", emoji: "🛏️", radar: [5, 1, 2, 1, 1], tags: ["封印大师", "结界守护者", "床仙"] },
+  32: { name: "被床封印型", code: "SEAL-M", movie: "《哈利bo特》禁锢咒", desc: "你的床不是家具，是法器。闹钟是咒语，被子是结界，而你是自愿被困的巫师。", emoji: "🛏️", radar: [5, 1, 2, 1, 1], tags: ["封印大师", "结界守护者", "床仙"] },
+  33: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。双眼无神，步伐飘忽，唯一动力是咖啡。但别担心，中午12点你将完成进化，重新做人。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  34: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。双眼无神，步伐飘忽，唯一动力是咖啡。但别担心，中午12点你将完成进化。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  35: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。但别担心，中午12点你将完成进化，重新做人。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  36: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。中午12点你将完成进化，重新做人。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  37: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。重新做人。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  38: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  39: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  40: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  41: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  42: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  43: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  44: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] },
+  45: { name: "丧尸苏醒型", code: "ZOMB-M", movie: "《釜山xing》同款", desc: "你的身体已经出门，灵魂还在被窝里。", emoji: "🧟", radar: [5, 1, 1, 1, 1], tags: ["行尸走肉", "咖啡依赖者", "晨间丧尸"] }
+};
+
+// ==================== 晚间结果（15题，分数范围15-45） ====================
+const eveningResults = {
+  15: { name: "功德圆满型", code: "BUDDHA-E", movie: "《西游降mo篇》玄奘成佛", desc: "你今天渡了九九八十一难，终于修成正果。工作搞定、社交满分、还做了好人好事。此刻的你头顶佛光，连洗澡水都是莲花味的。善哉！", emoji: "🙏", radar: [5, 5, 5, 5, 5], tags: ["功德圆满", "佛光普照", "今日MVP"] },
+  16: { name: "功德圆满型", code: "BUDDHA-E", movie: "《西游降mo篇》玄奘成佛", desc: "你今天渡了九九八十一难，终于修成正果。工作搞定、社交满分。此刻的你头顶佛光。善哉！", emoji: "🙏", radar: [5, 5, 5, 5, 5], tags: ["功德圆满", "佛光普照", "今日MVP"] },
+  17: { name: "功德圆满型", code: "BUDDHA-E", movie: "《西游降mo篇》玄奘成佛", desc: "你今天渡了九九八十一难，终于修成正果。此刻的你头顶佛光。善哉！", emoji: "🙏", radar: [5, 5, 5, 5, 5], tags: ["功德圆满", "佛光普照", "今日MVP"] },
+  18: { name: "小幸运锦鲤型", code: "KOI-E", movie: "《大鱼hai棠》守护灵", desc: "今天的小确幸像锦鲤围着你转：没堵车、没挨骂、外卖还多送了一根肠。你怀疑自己是天选之子，其实只是宇宙今天心情好，顺手宠了你一下。", emoji: "🐟", radar: [4, 4, 5, 4, 4], tags: ["锦鲤附体", "幸运儿", "宇宙宠儿"] },
+  19: { name: "小幸运锦鲤型", code: "KOI-E", movie: "《大鱼hai棠》守护灵", desc: "今天的小确幸像锦鲤围着你转。你怀疑自己是天选之子，其实只是宇宙今天心情好。", emoji: "🐟", radar: [4, 4, 5, 4, 4], tags: ["锦鲤附体", "幸运儿", "宇宙宠儿"] },
+  20: { name: "卡皮巴拉淡定型", code: "CAPY-E", movie: "《疯狂dong物城》水豚", desc: "今天无论发生啥，你都情绪稳定得像只水豚。被老板骂？哦。地铁挤？哦。加班？哦。这种活着就行的禅意，是当代最高级的修行。", emoji: "🦫", radar: [3, 3, 3, 5, 3], tags: ["情绪稳定", "佛系大师", "水豚本豚"] },
+  21: { name: "卡皮巴拉淡定型", code: "CAPY-E", movie: "《疯狂dong物城》水豚", desc: "今天无论发生啥，你都情绪稳定得像只水豚。这种活着就行的禅意，是当代最高级的修行。", emoji: "🦫", radar: [3, 3, 3, 5, 3], tags: ["情绪稳定", "佛系大师", "水豚本豚"] },
+  22: { name: "隐形卷王型", code: "NINJA-E", movie: "《谍die影重重》伯恩", desc: "你今天偷偷努力了，但表面云淡风轻。同事以为你准点下班，其实你在地铁上回邮件。卷得无声，是你的温柔。", emoji: "🕵️", radar: [4, 2, 3, 4, 4], tags: ["隐形卷王", "暗卷大师", "职场忍者"] },
+  23: { name: "隐形卷王型", code: "NINJA-E", movie: "《谍die影重重》伯恩", desc: "你今天偷偷努力了，但表面云淡风轻。卷得无声，是你的温柔。", emoji: "🕵️", radar: [4, 2, 3, 4, 4], tags: ["隐形卷王", "暗卷大师", "职场忍者"] },
+  24: { name: "自我疗愈型", code: "HEAL-E", movie: "《千与qian寻》泡温泉青蛙", desc: "今天没大事发生，但你还是给自己安排了全套SPA：热水澡、面膜、好剧。你知道生活不容易，所以更要在夜晚把自己重新拼凑起来。温柔且强大。", emoji: "🐸", radar: [3, 3, 3, 4, 4], tags: ["自我疗愈", "温柔强大", "夜间修复"] },
+  25: { name: "自我疗愈型", code: "HEAL-E", movie: "《千与qian寻》泡温泉青蛙", desc: "今天没大事发生，但你还是给自己安排了全套SPA。你知道生活不容易，所以更要在夜晚把自己重新拼凑起来。", emoji: "🐸", radar: [3, 3, 3, 4, 4], tags: ["自我疗愈", "温柔强大", "夜间修复"] },
+  26: { name: "社交能量耗尽型", code: "BATTERY-E", movie: "《机器zong动员》没电瓦力", desc: "今天的社交把你榨成了人干，此刻你像瓦力一样电量归零，只想瘫着充电。不是不爱人类，是爱不动了。请允许自己今晚关机，这是人权。", emoji: "🤖", radar: [3, 1, 2, 3, 3], tags: ["电量归零", "社交exhaustion", "需要充电"] },
+  27: { name: "社交能量耗尽型", code: "BATTERY-E", movie: "《机器zong动员》没电瓦力", desc: "今天的社交把你榨成了人干，此刻你像瓦力一样电量归零。不是不爱人类，是爱不动了。请允许自己今晚关机。", emoji: "🤖", radar: [3, 1, 2, 3, 3], tags: ["电量归零", "社交exhaustion", "需要充电"] },
+  28: { name: "戏精复盘型", code: "REPLAY-E", movie: "《霸王bie姬》程蝶衣入戏", desc: "你躺在床上，把今天的对话、表情、失误全部复盘了一遍，并给自己颁发了最佳后悔奖。戏精上身，但没关系，明天的你会更熟练地演好自己。", emoji: "🎭", radar: [3, 2, 2, 2, 2], tags: ["深夜复盘", "戏精附体", "后悔大师"] },
+  29: { name: "戏精复盘型", code: "REPLAY-E", movie: "《霸王bie姬》程蝶衣入戏", desc: "你躺在床上，把今天全部复盘了一遍，并给自己颁发了最佳后悔奖。明天的你会更熟练地演好自己。", emoji: "🎭", radar: [3, 2, 2, 2, 2], tags: ["深夜复盘", "戏精附体", "后悔大师"] },
+  30: { name: "深夜网抑云型", code: "EMO-E", movie: "《重庆sen林》失恋警察663", desc: "夜晚是你的emo开关，一关灯就开始思考人生、回忆前任、怀疑未来。像对着肥皂自言自语的警察，你的悲伤很文艺，但记得——天会亮的。", emoji: "🌧️", radar: [2, 2, 1, 1, 1], tags: ["网抑云", "深夜emo", "文艺悲伤"] },
+  31: { name: "深夜网抑云型", code: "EMO-E", movie: "《重庆sen林》失恋警察663", desc: "夜晚是你的emo开关，一关灯就开始思考人生。你的悲伤很文艺，但记得——天会亮的。", emoji: "🌧️", radar: [2, 2, 1, 1, 1], tags: ["网抑云", "深夜emo", "文艺悲伤"] },
+  32: { name: "水逆附体型", code: "UNLUCKY-E", movie: "《大话xi游》被念咒悟空", desc: "今天倒霉得像被诅咒：出门踩狗屎、开会忘带脑、回家钥匙断锁里。你觉得自己是被唐僧折磨的悟空，只想大喊：求求你别说了！但记住，水逆总会退的。", emoji: "😫", radar: [1, 1, 1, 1, 1], tags: ["水逆", "倒霉蛋", "被诅咒"] },
+  33: { name: "水逆附体型", code: "UNLUCKY-E", movie: "《大话xi游》被念咒悟空", desc: "今天倒霉得像被诅咒。你觉得自己是被唐僧折磨的悟空。但记住，水逆总会退的。", emoji: "😫", radar: [1, 1, 1, 1, 1], tags: ["水逆", "倒霉蛋", "被诅咒"] },
+  34: { name: "水逆附体型", code: "UNLUCKY-E", movie: "《大话xi游》被念咒悟空", desc: "今天倒霉得像被诅咒。但记住，水逆总会退的。", emoji: "😫", radar: [1, 1, 1, 1, 1], tags: ["水逆", "倒霉蛋", "被诅咒"] },
+  35: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。工作追杀、社交围堵、意外袭击，你终于爬回了家。此刻的你不需要治愈，需要的是把今天从记忆里格式化。睡吧，勇士，明天又是逃亡日。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  36: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。此刻的你不需要治愈，需要的是把今天从记忆里格式化。睡吧，勇士。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  37: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。睡吧，勇士，明天又是逃亡日。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  38: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。明天又是逃亡日。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  39: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  40: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  41: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  42: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  43: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  44: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] },
+  45: { name: "丧尸回巢型", code: "RETURN-E", movie: "《釜山xing》幸存者夜晚", desc: "你今天不是活着，是逃回来的。", emoji: "🏃", radar: [1, 1, 1, 1, 1], tags: ["幸存者", "逃难归来", "格式化记忆"] }
+};
+
+
+// 状态
+let currentMode = null;
+let currentQuestion = 0;
+let answers = [];
+let chartInstance = null;
+let currentResult = null;
+
+// 恢复进度
+try {
+  const saved = localStorage.getItem('personalityTestV2');
+  if (saved) {
+    const data = JSON.parse(saved);
+    if (data.mode && data.answers && data.answers.length > 0) {
+      // 有未完成的进度
+    }
+  }
+} catch(e) {}
+
+function saveProgress() {
+  try {
+    localStorage.setItem('personalityTestV2', JSON.stringify({
+      mode: currentMode,
+      currentQuestion: currentQuestion,
+      answers: answers,
+      timestamp: Date.now()
+    }));
+    showToast('进度已保存');
+  } catch(e) {}
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('saveToast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function clearProgress() {
+  try { localStorage.removeItem('personalityTestV2'); } catch(e) {}
+}
+
+function startTest(mode) {
+  currentMode = mode;
+  currentQuestion = 0;
+  answers = [];
+  clearProgress();
+
+  const quizPage = document.getElementById('quizPage');
+  const homePage = document.getElementById('homePage');
+
+  homePage.classList.remove('active');
+  homePage.classList.add('slide-out-left');
+
+  quizPage.className = 'page ' + (mode === 'morning' ? 'morning-theme' : 'evening-theme') + ' active';
+
+  setTimeout(() => {
+    homePage.classList.remove('slide-out-left');
+    homePage.style.display = 'none';
+    renderQuestion();
+  }, 400);
+}
+
+function renderQuestion() {
+  const questions = currentMode === 'morning' ? morningQuestions : eveningQuestions;
+  const q = questions[currentQuestion];
+  const total = questions.length;
+
+  document.getElementById('questionCounter').textContent = (currentQuestion + 1) + '/' + total;
+  document.getElementById('progressBar').style.width = ((currentQuestion + 1) / total * 100) + '%';
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('questionDimension').textContent = '维度 · ' + q.d;
+
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+
+  ['a', 'b', 'c'].forEach((opt, idx) => {
+    const card = document.createElement('div');
+    card.className = 'option-card';
+    card.innerHTML = `<div class="option-letter">${opt.toUpperCase()}</div><div>${q[opt]}</div>`;
+    card.onclick = () => selectAnswer(idx + 1);
+    container.appendChild(card);
+  });
+}
+
+function selectAnswer(score) {
+  answers.push(score);
+  saveProgress();
+
+  const questions = currentMode === 'morning' ? morningQuestions : eveningQuestions;
+
+  if (currentQuestion < questions.length - 1) {
+    currentQuestion++;
+    const container = document.getElementById('optionsContainer');
+    container.style.opacity = '0';
+    container.style.transform = 'translateX(-20px)';
+    container.style.transition = 'all 0.2s ease';
+
+    setTimeout(() => {
+      renderQuestion();
+      container.style.opacity = '1';
+      container.style.transform = 'translateX(0)';
+    }, 200);
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  const total = answers.reduce((a, b) => a + b, 0);
+  const results = currentMode === 'morning' ? morningResults : eveningResults;
+
+  // 找到最接近的分数
+  const availableScores = Object.keys(results).map(Number);
+  let closestScore = availableScores[0];
+  let minDiff = Math.abs(availableScores[0] - total);
+
+  for (let s of availableScores) {
+    const diff = Math.abs(s - total);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestScore = s;
+    }
+  }
+
+  const result = results[closestScore];
+  currentResult = result;
+  currentResult.totalScore = total;
+
+  const quizPage = document.getElementById('quizPage');
+  const resultPage = document.getElementById('resultPage');
+
+  quizPage.classList.remove('active');
+  quizPage.classList.add('slide-out-left');
+
+  resultPage.className = 'page result-page ' + (currentMode === 'morning' ? 'morning-theme' : 'evening-theme') + ' active';
+
+  document.getElementById('resultEmoji').textContent = result.emoji;
+  document.getElementById('resultTitle').textContent = result.name;
+  document.getElementById('resultCode').textContent = result.code;
+  document.getElementById('resultMovie').textContent = result.movie;
+  document.getElementById('scoreBadge').textContent = '总分：' + total + '分';
+  document.getElementById('resultDesc').textContent = result.desc;
+
+  // 生成维度标签
+  const tagsContainer = document.getElementById('dimensionTags');
+  tagsContainer.innerHTML = '';
+  result.tags.forEach(tag => {
+    const span = document.createElement('span');
+    span.className = 'dimension-tag';
+    span.textContent = tag;
+    tagsContainer.appendChild(span);
+  });
+
+  document.getElementById('posterPreview').style.display = 'none';
+
+  setTimeout(() => {
+    quizPage.classList.remove('slide-out-left');
+    quizPage.style.display = 'none';
+    renderRadarChart(result.radar);
+  }, 400);
+}
+
+function renderRadarChart(radarData) {
+  const chartDom = document.getElementById('radarChart');
+  if (chartInstance) chartInstance.dispose();
+
+  chartInstance = echarts.init(chartDom);
+
+  const isMorning = currentMode === 'morning';
+  const indicators = isMorning 
+    ? [
+        { name: '起床难度', max: 5 },
+        { name: '行动力', max: 5 },
+        { name: '社交欲', max: 5 },
+        { name: '自律性', max: 5 },
+        { name: '乐观度', max: 5 }
+      ]
+    : [
+        { name: '完成度', max: 5 },
+        { name: '社交能量', max: 5 },
+        { name: '幸运值', max: 5 },
+        { name: '情绪稳定', max: 5 },
+        { name: '自我认同', max: 5 }
+      ];
+
+  const color = isMorning ? '#ff6b35' : '#8a2be2';
+  const bgColor = isMorning ? 'rgba(255,159,67,0.2)' : 'rgba(138,43,226,0.2)';
+
+  const option = {
+    animation: true,
+    animationDuration: 1500,
+    animationEasing: 'cubicOut',
+    radar: {
+      indicator: indicators,
+      shape: 'polygon',
+      radius: '65%',
+      center: ['50%', '50%'],
+      axisName: {
+        color: isMorning ? '#8b4513' : '#b19cd9',
+        fontSize: 11,
+        fontWeight: 'bold'
+      },
+      splitArea: {
+        areaStyle: {
+          color: [isMorning ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.05)', 
+                  isMorning ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.02)']
+        }
+      },
+      axisLine: {
+        lineStyle: { color: isMorning ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }
+      },
+      splitLine: {
+        lineStyle: { color: isMorning ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)' }
+      }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: radarData,
+        name: '人格画像',
+        areaStyle: {
+          color: bgColor
+        },
+        lineStyle: {
+          color: color,
+          width: 2
+        },
+        itemStyle: {
+          color: color,
+          borderWidth: 2,
+          borderColor: isMorning ? '#fff' : '#1a1a2e'
+        }
+      }]
+    }]
+  };
+
+  chartInstance.setOption(option);
+}
+
+// 生成分享海报
+function generatePoster() {
+  if (!currentResult) {
+    showToast('请先完成测试');
+    return;
+  }
+
+  const posterArea = document.getElementById('posterArea');
+  const posterPreview = document.getElementById('posterPreview');
+  const posterImage = document.getElementById('posterImage');
+
+  // 更新海报内容
+  document.getElementById('posterEmoji').textContent = currentResult.emoji;
+  document.getElementById('posterTitle').textContent = currentResult.name;
+  document.getElementById('posterCode').textContent = currentResult.code;
+  document.getElementById('posterMovie').textContent = currentResult.movie;
+  document.getElementById('posterDesc').textContent = '"' + currentResult.desc + '"';
+
+  // 在海报区域生成雷达图
+  const posterRadar = document.getElementById('posterRadar');
+  posterRadar.innerHTML = '';
+
+  // 创建临时雷达图
+  const tempChartDom = document.createElement('div');
+  tempChartDom.style.width = '360px';
+  tempChartDom.style.height = '260px';
+  posterRadar.appendChild(tempChartDom);
+
+  const tempChart = echarts.init(tempChartDom);
+  const isMorning = currentMode === 'morning';
+  const indicators = isMorning 
+    ? [
+        { name: '起床难度', max: 5 },
+        { name: '行动力', max: 5 },
+        { name: '社交欲', max: 5 },
+        { name: '自律性', max: 5 },
+        { name: '乐观度', max: 5 }
+      ]
+    : [
+        { name: '完成度', max: 5 },
+        { name: '社交能量', max: 5 },
+        { name: '幸运值', max: 5 },
+        { name: '情绪稳定', max: 5 },
+        { name: '自我认同', max: 5 }
+      ];
+
+  const color = isMorning ? '#ff6b35' : '#8a2be2';
+  const bgColor = isMorning ? 'rgba(255,159,67,0.3)' : 'rgba(138,43,226,0.3)';
+
+  tempChart.setOption({
+    radar: {
+      indicator: indicators,
+      shape: 'polygon',
+      radius: '65%',
+      center: ['50%', '50%'],
+      axisName: {
+        color: '#b19cd9',
+        fontSize: 11,
+        fontWeight: 'bold'
+      },
+      splitArea: {
+        areaStyle: {
+          color: ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.04)']
+        }
+      },
+      axisLine: {
+        lineStyle: { color: 'rgba(255,255,255,0.15)' }
+      },
+      splitLine: {
+        lineStyle: { color: 'rgba(255,255,255,0.15)' }
+      }
+    },
+    series: [{
+      type: 'radar',
+      data: [{
+        value: currentResult.radar,
+        name: '人格画像',
+        areaStyle: { color: bgColor },
+        lineStyle: { color: color, width: 2 },
+        itemStyle: { color: color, borderWidth: 2, borderColor: '#1a1a2e' }
+      }]
+    }]
+  });
+
+  // 等待图表渲染完成
+  setTimeout(() => {
+    // 使用 html2canvas 生成海报
+    html2canvas(posterArea, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: null,
+      width: 750,
+      height: 1334,
+      logging: false
+    }).then(canvas => {
+      // 销毁临时图表
+      tempChart.dispose();
+      posterRadar.innerHTML = '';
+
+      // 显示预览
+      const imageUrl = canvas.toDataURL('image/png');
+      posterImage.src = imageUrl;
+      posterPreview.style.display = 'block';
+
+      // 滚动到海报位置
+      posterPreview.scrollIntoView({ behavior: 'smooth' });
+
+      showToast('海报生成成功！长按保存');
+    }).catch(err => {
+      console.error('海报生成失败:', err);
+      showToast('海报生成失败，请重试');
+    });
+  }, 500);
+}
+
+function goBack() {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    answers.pop();
+    saveProgress();
+    renderQuestion();
+  }
+}
+
+function goHome() {
+  clearProgress();
+  currentMode = null;
+  currentQuestion = 0;
+  answers = [];
+  currentResult = null;
+
+  // 隐藏海报预览
+  document.getElementById('posterPreview').style.display = 'none';
+
+  const pages = document.querySelectorAll('.page');
+  pages.forEach(p => {
+    p.className = 'page';
+    p.style.display = '';
+    p.style.opacity = '';
+    p.style.transform = '';
+  });
+
+  document.getElementById('homePage').classList.add('active');
+
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
+}
+
+function restartSame() {
+  if (currentMode) {
+    const resultPage = document.getElementById('resultPage');
+    const quizPage = document.getElementById('quizPage');
+
+    resultPage.classList.remove('active');
+    resultPage.classList.add('slide-out-left');
+
+    // 隐藏海报预览
+    document.getElementById('posterPreview').style.display = 'none';
+
+    currentQuestion = 0;
+    answers = [];
+    currentResult = null;
+    clearProgress();
+
+    quizPage.className = 'page ' + (currentMode === 'morning' ? 'morning-theme' : 'evening-theme') + ' active';
+
+    setTimeout(() => {
+      resultPage.classList.remove('slide-out-left');
+      resultPage.style.display = 'none';
+      renderQuestion();
+    }, 400);
+  }
+}
+
+// 窗口大小变化时重绘图表
+window.addEventListener('resize', () => {
+  if (chartInstance) chartInstance.resize();
+});
+</script>
+</body>
+</html>
